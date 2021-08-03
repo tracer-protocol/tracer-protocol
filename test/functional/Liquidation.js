@@ -1747,6 +1747,21 @@ describe("Liquidation functional tests", async () => {
 
         context("when some invalid orders", async () => {
             it("Calculates correctly", async () => {
+                let result =
+                    await contracts.liquidation.callStatic.calcUnitsSold(
+                        [
+                            contracts.sellHalfLiquidationAmount,
+                            contracts.longOrder,
+                            contracts.earlyCreationOrder,
+                        ],
+                        contracts.modifiableTrader.address,
+                        0
+                    )
+                expect(result[0]).to.equal(ethers.utils.parseEther("2500")) // units sold
+                expect(result[1]).to.equal(ethers.utils.parseEther("0.5")) // avg price
+            })
+
+            it("Emits events", async () => {
                 const contracts = await setupReceiptTest()
                 const receiptId = 0
 
@@ -1773,18 +1788,23 @@ describe("Liquidation functional tests", async () => {
                 })
                 const expectedNumberOfEventEmissions = 2
                 expect(eventCounter).to.equal(expectedNumberOfEventEmissions)
-                const result =
-                    await contracts.liquidation.callStatic.calcUnitsSold(
-                        [
-                            contracts.sellHalfLiquidationAmount,
-                            contracts.longOrder,
-                            contracts.earlyCreationOrder,
-                        ],
-                        contracts.modifiableTrader.address,
-                        0
-                    )
-                expect(result[0]).to.equal(ethers.utils.parseEther("2500")) // units sold
-                expect(result[1]).to.equal(ethers.utils.parseEther("0.5")) // avg price
+            })
+        })
+
+        context("when duplicate orders", async () => {
+            it("Reverts", async () => {
+                let tx = contracts.liquidation.callStatic.calcUnitsSold(
+                    [
+                        contracts.sellHalfLiquidationAmount,
+                        contracts.sellHalfLiquidationAmount,
+                        contracts.sellHalfLiquidationAmount,
+                    ],
+                    contracts.modifiableTrader.address,
+                    0
+                )
+                await expect(tx).to.be.revertedWith(
+                    "LIQ: Order already claimed"
+                )
             })
         })
 

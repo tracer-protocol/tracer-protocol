@@ -32,6 +32,9 @@ contract Liquidation is ILiquidation, Ownable {
     // Receipt ID => LiquidationReceipt
     mapping(uint256 => LibLiquidation.LiquidationReceipt) public liquidationReceipts;
 
+    // Order ID => used to claim slippage reimbursement
+    mapping(bytes32 => bool) claimedOrders;
+
     event ClaimedReceipts(address indexed liquidator, address indexed market, uint256 indexed receiptId);
     event ClaimedEscrow(address indexed liquidatee, address indexed market, uint256 indexed id);
     event Liquidate(
@@ -280,6 +283,7 @@ contract Liquidation is ILiquidation, Ownable {
         LibLiquidation.LiquidationReceipt memory receipt = liquidationReceipts[receiptId];
         uint256 unitsSold;
         uint256 avgPrice;
+
         for (uint256 i; i < orders.length; i++) {
             Perpetuals.Order memory order = ITrader(traderContract).getOrder(orders[i]);
 
@@ -304,6 +308,11 @@ contract Liquidation is ILiquidation, Ownable {
                 emit InvalidClaimOrder(receiptId);
                 continue;
             }
+
+            bytes32 orderId = Perpetuals.orderId(order);
+            require(!claimedOrders[orderId], "LIQ: Order already claimed");
+            claimedOrders[orderId] = true;
+
             uint256 orderFilled = ITrader(traderContract).filledAmount(order);
             uint256 averageExecutionPrice = ITrader(traderContract).getAverageExecutionPrice(order);
 
@@ -323,18 +332,18 @@ contract Liquidation is ILiquidation, Ownable {
 
     /**
      * @notice Marks receipts as claimed and returns the refund amount
-     * @param escrowId the id of the receipt created during the liquidation event
+     * @param receiptId the id of the receipt created during the liquidation event
      * @param orders the orders that sell the liquidated positions
      * @param traderContract the address of the trader contract the selling orders were made by
      */
     function calcAmountToReturn(
-        uint256 escrowId,
+        uint256 receiptId,
         Perpetuals.Order[] calldata orders,
         address traderContract
     ) public override returns (uint256) {
-        LibLiquidation.LiquidationReceipt memory receipt = liquidationReceipts[escrowId];
-        // Validate the escrowed order was fully sold
-        (uint256 unitsSold, uint256 avgPrice) = calcUnitsSold(orders, traderContract, escrowId);
+        LibLiquidation.LiquidationReceipt memory receipt = liquidationReceipts[receiptId];
+        // order filled amount cannot exceed amount being liquidated
+        (uint256 unitsSold, uint256 avgPrice) = calcUnitsSold(orders, traderContract, receiptId);
         require(unitsSold <= uint256(receipt.amountLiquidated.abs()), "LIQ: Unit mismatch");
 
         uint256 amountToReturn = LibLiquidation.calculateSlippage(unitsSold, maxSlippage, avgPrice, receipt);
@@ -390,6 +399,7 @@ contract Liquidation is ILiquidation, Ownable {
     /**
      * @notice Allows a liquidator to submit a single liquidation receipt and multiple order ids. If the
      *         liquidator experienced slippage, will refund them a proportional amount of their deposit.
+     * @notice A receipt can only be claimed once, so all orders must be included
      * @param receiptId Used to identify the receipt that will be claimed
      * @param orders The orders that sold the liquidated position
      */
@@ -401,12 +411,12 @@ contract Liquidation is ILiquidation, Ownable {
         // Claim the receipts from the escrow system, get back amount to return
         LibLiquidation.LiquidationReceipt memory receipt = liquidationReceipts[receiptId];
         require(receipt.liquidator == msg.sender, "LIQ: Liquidator mismatch");
-        // Mark refund as claimed
         require(!receipt.liquidatorRefundClaimed, "LIQ: Already claimed");
-        liquidationReceipts[receiptId].liquidatorRefundClaimed = true;
-        liquidationReceipts[receiptId].escrowClaimed = true;
         require(block.timestamp <= receipt.releaseTime, "LIQ: claim time passed");
         require(tracer.tradingWhitelist(traderContract), "LIQ: Trader is not whitelisted");
+
+        liquidationReceipts[receiptId].liquidatorRefundClaimed = true;
+        liquidationReceipts[receiptId].escrowClaimed = true;
 
         uint256 amountToReturn = calcAmountToReturn(receiptId, orders, traderContract);
 
