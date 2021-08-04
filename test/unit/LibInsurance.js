@@ -30,6 +30,206 @@ describe("Unit tests: LibInsurance.sol", function () {
         accounts = await ethers.getSigners()
     })
 
+    describe("calculateDelayedWithdrawalFee", async () => {
+        context("When target is 0", async () => {
+            it("Returns 0", async () => {
+                const target = ethers.utils.parseEther("0")
+                const poolTokenUnderlying = ethers.utils.parseEther("1000")
+                const pendingWithdrawals = ethers.utils.parseEther("1234")
+                const wadCollateralAmount = ethers.utils.parseEther("4567")
+                let result = await libInsurance.calculateDelayedWithdrawalFee(
+                    target,
+                    poolTokenUnderlying,
+                    pendingWithdrawals,
+                    wadCollateralAmount
+                )
+
+                const expectedResult = zero
+                expect(result).to.equal(expectedResult)
+            })
+        })
+
+        context("withdrawing 0", async () => {
+            it("Returns 0", async () => {
+                const target = ethers.utils.parseEther("100")
+                const poolTokenUnderlying = ethers.utils.parseEther("90")
+                const pendingWithdrawals = ethers.utils.parseEther("45")
+                const wadCollateralAmount = ethers.utils.parseEther("0")
+
+                let result = await libInsurance.calculateDelayedWithdrawalFee(
+                    target,
+                    poolTokenUnderlying,
+                    pendingWithdrawals,
+                    wadCollateralAmount
+                )
+
+                const expectedResult = zero
+                expect(result).to.equal(expectedResult)
+            })
+        })
+
+        context("amount withdrawn > takes pool below 0", async () => {
+            it("Reverts", async () => {
+                const target = ethers.utils.parseEther("100")
+                const poolTokenUnderlying = ethers.utils.parseEther("90")
+                const pendingWithdrawals = ethers.utils.parseEther("45")
+                const wadCollateralAmount = ethers.utils.parseEther("50")
+
+                let result = libInsurance.calculateDelayedWithdrawalFee(
+                    target,
+                    poolTokenUnderlying,
+                    pendingWithdrawals,
+                    wadCollateralAmount
+                )
+
+                // "library was called directly" is the error given when direct library calls revert
+                await expect(result).to.be.revertedWith(
+                    "library was called directly"
+                )
+            })
+        })
+
+        context("percentLeftover > 1", async () => {
+            it("Returns 0", async () => {
+                const target = ethers.utils.parseEther("100")
+                const poolTokenUnderlying = ethers.utils.parseEther("900")
+                const pendingWithdrawals = ethers.utils.parseEther("45")
+                const wadCollateralAmount = ethers.utils.parseEther("40")
+
+                let result = await libInsurance.calculateDelayedWithdrawalFee(
+                    target,
+                    poolTokenUnderlying,
+                    pendingWithdrawals,
+                    wadCollateralAmount
+                )
+
+                const expectedResult = zero
+                expect(result).to.equal(expectedResult)
+            })
+        })
+
+        context("Normal case", async () => {
+            it("Calculates correctly", async () => {
+                const target = ethers.utils.parseEther("100")
+                const poolTokenUnderlying = ethers.utils.parseEther("90")
+                const pendingWithdrawals = ethers.utils.parseEther("20")
+                const wadCollateralAmount = ethers.utils.parseEther("15")
+
+                let result = await libInsurance.calculateDelayedWithdrawalFee(
+                    target,
+                    poolTokenUnderlying,
+                    pendingWithdrawals,
+                    wadCollateralAmount
+                )
+
+                // feeRate = 0.2 * (1 - 55/100) ^ 2 = 0.0405
+                // fee = 15 * 0.0405 = 0.6075
+                const expectedResult = ethers.utils.parseEther("0.6075")
+                expect(result).to.equal(expectedResult)
+            })
+        })
+    })
+
+    describe("calculateImmediateWithdrawalFee", async () => {
+        context("When target is 0", async () => {
+            it("Returns 0", async () => {
+                const target = ethers.utils.parseEther("0")
+                const poolTokenUnderlying = ethers.utils.parseEther("1000")
+                const pendingWithdrawals = ethers.utils.parseEther("1234")
+                const wadCollateralAmount = ethers.utils.parseEther("4567")
+                let result = await libInsurance.calculateImmediateWithdrawalFee(
+                    target,
+                    poolTokenUnderlying,
+                    pendingWithdrawals,
+                    wadCollateralAmount
+                )
+
+                const expectedResult = zero
+                expect(result).to.equal(expectedResult)
+            })
+        })
+
+        context("withdrawing 0", async () => {
+            it("Returns 0", async () => {
+                const target = ethers.utils.parseEther("100")
+                const poolTokenUnderlying = ethers.utils.parseEther("90")
+                const pendingWithdrawals = ethers.utils.parseEther("45")
+                const wadCollateralAmount = ethers.utils.parseEther("0")
+
+                let result = await libInsurance.calculateImmediateWithdrawalFee(
+                    target,
+                    poolTokenUnderlying,
+                    pendingWithdrawals,
+                    wadCollateralAmount
+                )
+
+                const expectedResult = zero
+                expect(result).to.equal(expectedResult)
+            })
+        })
+
+        context("amount withdrawn > takes pool below 0", async () => {
+            it("Reverts", async () => {
+                const target = ethers.utils.parseEther("100")
+                const poolTokenUnderlying = ethers.utils.parseEther("90")
+                const pendingWithdrawals = ethers.utils.parseEther("45")
+                const wadCollateralAmount = ethers.utils.parseEther("50")
+
+                let result = libInsurance.calculateImmediateWithdrawalFee(
+                    target,
+                    poolTokenUnderlying,
+                    pendingWithdrawals,
+                    wadCollateralAmount
+                )
+
+                // "library was called directly" is the error given when direct library calls revert
+                await expect(result).to.be.revertedWith(
+                    "library was called directly"
+                )
+            })
+        })
+
+        context("percentLeftover > 1", async () => {
+            it("Returns 0", async () => {
+                const target = ethers.utils.parseEther("100")
+                const poolTokenUnderlying = ethers.utils.parseEther("900")
+                const pendingWithdrawals = ethers.utils.parseEther("45")
+                const wadCollateralAmount = ethers.utils.parseEther("40")
+
+                let result = await libInsurance.calculateImmediateWithdrawalFee(
+                    target,
+                    poolTokenUnderlying,
+                    pendingWithdrawals,
+                    wadCollateralAmount
+                )
+
+                const expectedResult = ethers.utils.parseEther("0")
+                expect(result).to.equal(expectedResult)
+            })
+        })
+
+        context("Normal case", async () => {
+            it("Calculates correctly", async () => {
+                const target = ethers.utils.parseEther("100")
+                const poolTokenUnderlying = ethers.utils.parseEther("90")
+                const pendingWithdrawals = ethers.utils.parseEther("20")
+                const wadCollateralAmount = ethers.utils.parseEther("15")
+
+                let result = await libInsurance.calculateImmediateWithdrawalFee(
+                    target,
+                    poolTokenUnderlying,
+                    pendingWithdrawals,
+                    wadCollateralAmount
+                )
+
+                // feeRate = (1 - 55/100) ^ 2 = 0.2025
+                // fee = 15 * 0.2025 = 3.0375
+                const expectedResult = ethers.utils.parseEther("3.0375")
+                expect(result).to.equal(expectedResult)
+            })
+        })
+    })
+
     describe("calcMintAmount", async () => {
         context("when called with pool token total supply as 0", async () => {
             it("returns 0", async () => {

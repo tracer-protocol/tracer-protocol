@@ -153,7 +153,7 @@ contract TracerPerpetualSwaps is ITracerPerpetualSwaps, Ownable {
 
         return
             Perpetuals.calculateTrueMaxLeverage(
-                insurance.getPoolHoldings(),
+                insurance.getPoolHoldingsWithPending(),
                 insurance.getPoolTarget(),
                 maxLeverage,
                 lowestMaxLeverage,
