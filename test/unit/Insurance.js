@@ -105,7 +105,6 @@ const setup = deployments.createFixture(async () => {
     const tracer = await tracerContractFactory.deploy(
         ethers.utils.formatBytes32String("TEST/USD"),
         testToken.address,
-        18,
         deployer, // Dummy address so it is not address(0)
         maxLeverage,
         1,

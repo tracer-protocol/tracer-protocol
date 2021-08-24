@@ -192,7 +192,6 @@ module.exports = async function (hre) {
     })
 
     let maxLeverage = ethers.utils.parseEther("12.5")
-    let tokenDecimals = new ethers.BigNumber.from("18").toString()
     let feeRate = 0 // 0 percent
     let fundingRateSensitivity = ethers.utils.parseEther("1")
     let maxLiquidationSlippage = ethers.utils.parseEther("0.5") // 50 percent
@@ -205,7 +204,6 @@ module.exports = async function (hre) {
         [
             "bytes32", //_marketId,
             "address", //_tracerQuoteToken,
-            "uint256", //_tokenDecimals,
             "address", //_gasPriceOracle,
             "uint256", //_maxLeverage,
             "uint256", //_fundingRateSensitivity,
@@ -219,7 +217,6 @@ module.exports = async function (hre) {
         [
             ethers.utils.formatBytes32String("TEST1/USD"),
             token.address,
-            tokenDecimals,
             gasPriceOracle.address,
             maxLeverage,
             fundingRateSensitivity,

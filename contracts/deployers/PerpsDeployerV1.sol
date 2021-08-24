@@ -12,7 +12,6 @@ contract PerpsDeployerV1 is IPerpsDeployer {
         (
             bytes32 _tracerId,
             address _tracerQuoteToken,
-            uint256 _tokenDecimals,
             address _gasPriceOracle,
             uint256 _maxLeverage,
             uint256 _fundingRateSensitivity,
@@ -24,20 +23,7 @@ contract PerpsDeployerV1 is IPerpsDeployer {
             uint256 _liquidationGasCost
         ) = abi.decode(
                 _data,
-                (
-                    bytes32,
-                    address,
-                    uint256,
-                    address,
-                    uint256,
-                    uint256,
-                    uint256,
-                    address,
-                    uint256,
-                    uint256,
-                    uint256,
-                    uint256
-                )
+                (bytes32, address, address, uint256, uint256, uint256, address, uint256, uint256, uint256, uint256)
             );
         require(_tracerQuoteToken != address(0), "TCRDeploy: _tracerQuoteToken = 0");
         require(_gasPriceOracle != address(0), "TCRDeploy: _gasPriceOracle = 0");
@@ -45,7 +31,6 @@ contract PerpsDeployerV1 is IPerpsDeployer {
         TracerPerpetualSwaps tracer = new TracerPerpetualSwaps(
             _tracerId,
             _tracerQuoteToken,
-            _tokenDecimals,
             _gasPriceOracle,
             _maxLeverage,
             _fundingRateSensitivity,

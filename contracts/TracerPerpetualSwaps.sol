@@ -9,8 +9,8 @@ import "./Interfaces/IInsurance.sol";
 import "./Interfaces/ITracerPerpetualSwaps.sol";
 import "./Interfaces/IPricing.sol";
 import "./Interfaces/ITrader.sol";
+import "./Interfaces/IERC20Details.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "prb-math/contracts/PRBMathSD59x18.sol";
 import "prb-math/contracts/PRBMathUD60x18.sol";
 
@@ -97,7 +97,6 @@ contract TracerPerpetualSwaps is ITracerPerpetualSwaps, Ownable {
      *         will be able to purchase and trade tracers after this deployment.
      * @param _marketId the id of the market, given as BASE/QUOTE
      * @param _tracerQuoteToken the address of the token used for margin accounts (i.e. The margin token)
-     * @param _tokenDecimals the number of decimal places the quote token supports
      * @param _gasPriceOracle the address of the contract implementing gas price oracle
      * @param _maxLeverage the max leverage of the market represented as a WAD value.
      * @param _fundingRateSensitivity the affect funding rate changes have on funding paid; u60.18-decimal fixed-point number (WAD value)
@@ -113,7 +112,6 @@ contract TracerPerpetualSwaps is ITracerPerpetualSwaps, Ownable {
     constructor(
         bytes32 _marketId,
         address _tracerQuoteToken,
-        uint256 _tokenDecimals,
         address _gasPriceOracle,
         uint256 _maxLeverage,
         uint256 _fundingRateSensitivity,
@@ -128,12 +126,12 @@ contract TracerPerpetualSwaps is ITracerPerpetualSwaps, Ownable {
         require(_deleveragingCliff <= MAX_PERCENT, "TCR: Delev cliff > 100%");
         require(_lowestMaxLeverage <= _maxLeverage, "TCR: Invalid leverage");
         require(_insurancePoolSwitchStage < _deleveragingCliff, "TCR: Invalid switch stage");
-        // don't convert to interface as we don't need to interact with the contract
         require(_tracerQuoteToken != address(0), "TCR: _tracerQuoteToken = address(0)");
         require(_gasPriceOracle != address(0), "TCR: _gasPriceOracle = address(0)");
         require(_feeReceiver != address(0), "TCR: _feeReceiver = address(0)");
+        require(IERC20Details(_tracerQuoteToken).decimals() <= 18, "TCR: Decimals > 18");
         tracerQuoteToken = _tracerQuoteToken;
-        quoteTokenDecimals = _tokenDecimals;
+        quoteTokenDecimals = IERC20Details(_tracerQuoteToken).decimals();
         gasPriceOracle = _gasPriceOracle;
         marketId = _marketId;
         feeRate = _feeRate;

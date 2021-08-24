@@ -167,7 +167,6 @@ module.exports = async function (hre) {
 
     // deploy ETH/USDC Market using Chainlink Oracle
     let maxLeverage = ethers.utils.parseEther("12.5")
-    let tokenDecimals = new ethers.BigNumber.from("8").toString()
     let feeRate = 0 // 0 percent
     let fundingRateSensitivity = ethers.utils.parseEther("1")
     let maxLiquidationSlippage = ethers.utils.parseEther("0.5") // 50 percent
@@ -180,7 +179,6 @@ module.exports = async function (hre) {
         [
             "bytes32", //_marketId,a
             "address", //_tracerQuoteToken,
-            "uint256", //_tokenDecimals,
             "address", //_gasPriceOracle,
             "uint256", //_maxLeverage,
             "uint256", //_fundingRateSensitivity,
@@ -194,7 +192,6 @@ module.exports = async function (hre) {
         [
             ethers.utils.formatBytes32String("ETH/USD"),
             token.address,
-            tokenDecimals,
             gasPriceOracle.address,
             maxLeverage,
             fundingRateSensitivity,
@@ -228,7 +225,6 @@ module.exports = async function (hre) {
         [
             "bytes32", //_marketId,a
             "address", //_tracerQuoteToken,
-            "uint256", //_tokenDecimals,
             "address", //_gasPriceOracle,
             "uint256", //_maxLeverage,
             "uint256", //_fundingRateSensitivity,
@@ -242,7 +238,6 @@ module.exports = async function (hre) {
         [
             ethers.utils.formatBytes32String("CUSTOM/USD"),
             token.address,
-            tokenDecimals,
             gasPriceOracle.address,
             maxLeverage2,
             fundingRateSensitivity,
@@ -377,7 +372,6 @@ module.exports = async function (hre) {
         constructorArguments: [
             ethers.utils.formatBytes32String("ETH/USD"),
             token.address,
-            tokenDecimals,
             gasPriceOracle.address,
             maxLeverage,
             fundingRateSensitivity,
@@ -418,7 +412,6 @@ module.exports = async function (hre) {
         constructorArguments: [
             ethers.utils.formatBytes32String("CUSTOM/USD"),
             token.address,
-            tokenDecimals,
             gasPriceOracle.address,
             maxLeverage2,
             fundingRateSensitivity,
