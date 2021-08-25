@@ -166,15 +166,10 @@ library Prices {
 
         // If totalUnderlyingTimeWeight or totalDerivativeTimeWeight is 0, there were no trades in
         // the last 8 hours and zero should be returned as the TWAP (also prevents division by zero)
-        if (totalUnderlyingTimeWeight == 0 && totalDerivativeTimeWeight == 0) {
-            return TWAP(0, 0);
-        } else if (totalUnderlyingTimeWeight == 0) {
-            return TWAP(0, cumulativeDerivative / totalDerivativeTimeWeight);
-        } else if (totalDerivativeTimeWeight == 0) {
-            return TWAP(cumulativeUnderlying / totalUnderlyingTimeWeight, 0);
-        }
+        uint256 underlyingTWAP = totalUnderlyingTimeWeight == 0 ? 0 : cumulativeUnderlying / totalUnderlyingTimeWeight;
+        uint256 derivativeTWAP = totalDerivativeTimeWeight == 0 ? 0 : cumulativeDerivative / totalDerivativeTimeWeight;
 
-        return TWAP(cumulativeUnderlying / totalUnderlyingTimeWeight, cumulativeDerivative / totalDerivativeTimeWeight);
+        return TWAP(underlyingTWAP, derivativeTWAP);
     }
 
     /**

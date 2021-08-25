@@ -104,7 +104,12 @@ describe("Functional tests: Pricing", function () {
         ]
 
         // place trades
-        await traderInstance.executeTrade([mockSignedLong], [mockSignedShort])
+        let tx = await traderInstance.executeTrade(
+            [mockSignedLong],
+            [mockSignedShort]
+        )
+        // verify that trade was successful
+        expect(tx).to.emit(tracer, "MatchedOrders")
         await traderInstance.clearFilled(mockSignedLong)
         await traderInstance.clearFilled(mockSignedShort)
     }
@@ -258,36 +263,88 @@ describe("Functional tests: Pricing", function () {
     })
 
     describe("timeValue", async () => {
-        it("returns the daily average price difference for last 90 days", async () => {
-            // set average tracer price to 10 for day
-            // set average oracle price to 12 for day
-            // daily average price difference is 2
+        it("correctly updates every 24 hours", async () => {
+            // state 1
+            // day: 1
+            // daily average price difference: -2 (10-12)
+            // timeValue: 0
             await oracle.setPrice(12 * 10 ** 8)
             await executeTrade(
                 ethers.utils.parseEther("10"),
                 ethers.utils.parseEther("2")
             )
+            let expectedTimeValue = 0
+            let tx = await pricing.timeValue()
+            expect(tx).to.equal(expectedTimeValue)
 
-            // forward time to next day
+            // state 2
+            // day: 2
+            // daily average price difference: -1 (11-12)
+            // timeValue: 2/90 = -0.02 recurring
             await forwardTime(24 * 3600)
+            await executeTrade(
+                ethers.utils.parseEther("11"),
+                ethers.utils.parseEther("2")
+            )
+            expectedTimeValue = ethers.utils.parseEther("-0.022222222222222222")
+            tx = await pricing.timeValue()
+            expect(tx).to.equal(expectedTimeValue)
 
-            // create a new trade in the next hour to update the current hour
-            // new trade has price difference of 2
+            // state 3
+            // day: 3
+            // daily average price difference: -3 (11-12)
+            // timeValue: -2/90 + -1/90 = -0.03 recurring
+            await forwardTime(24 * 3600)
+            await executeTrade(
+                ethers.utils.parseEther("9"),
+                ethers.utils.parseEther("2")
+            )
+            expectedTimeValue = ethers.utils.parseEther("-0.033333333333333333")
+
+            tx = await pricing.timeValue()
+            expect(tx).to.equal(expectedTimeValue)
+        })
+
+        it("returns only the last 90 days of averages", async () => {
+            // state 1
+            // day: 1
+            // daily average price difference: -2 (10-12)
+            // timeValue: 0
+            await oracle.setPrice(12 * 10 ** 8)
             await executeTrade(
                 ethers.utils.parseEther("10"),
                 ethers.utils.parseEther("2")
             )
-
-            // time value is udpated at end of each day, only first day will be recorded
-            // expected time value = (tracer - oracle)/90 = (10 - 12)/90 = -0.022222222222222222
-            let expectedTimeValue = ethers.utils.parseEther(
-                "-0.022222222222222222"
-            )
+            let expectedTimeValue = 0
             let tx = await pricing.timeValue()
             expect(tx).to.equal(expectedTimeValue)
 
-            // todo test case for when time passes 90 days
-            await forwardTime(90 * 24 * 3600)
+            // state 2
+            // day: 2
+            // daily average price difference: -1 (11-12)
+            // timeValue: 2/90 = -0.02 recurring
+            await forwardTime(24 * 3600)
+            await executeTrade(
+                ethers.utils.parseEther("11"),
+                ethers.utils.parseEther("2")
+            )
+            expectedTimeValue = ethers.utils.parseEther("-0.022222222222222222")
+            tx = await pricing.timeValue()
+            expect(tx).to.equal(expectedTimeValue)
+
+            // state 3
+            // day: 93
+            // daily average price difference: -3 (11-12)
+            // timeValue: -1/90 (90 day avg from day 2-92)
+            await forwardTime(91 * 24 * 3600)
+            await executeTrade(
+                ethers.utils.parseEther("9"),
+                ethers.utils.parseEther("2")
+            )
+            expectedTimeValue = ethers.utils.parseEther("-0.011111111111111111")
+
+            tx = await pricing.timeValue()
+            expect(tx).to.equal(expectedTimeValue)
         })
     })
 
